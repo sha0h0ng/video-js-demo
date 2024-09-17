@@ -1,0 +1,170 @@
+<html>
+  <head>
+    <link href="/css/video-js.css" rel="stylesheet" />
+
+    <style>
+      .video-js .vjs-slider-bar::before {
+        z-index: 2;
+      }
+
+      .vjs-marker-range {
+        position: absolute;
+        height: 100%; /* Adjust height as needed */
+        z-index: 10; /* Base z-index */
+        pointer-events: none; /* Ensures clicks pass through */
+      }
+
+      /* Optionally, different z-index levels for markers based on array index */
+      .vjs-marker-range:nth-child(1) {
+        z-index: 10;
+      }
+      .vjs-marker-range:nth-child(2) {
+        z-index: 11;
+      }
+      .vjs-marker-range:nth-child(3) {
+        z-index: 12;
+      }
+
+      .video-js .vjs-progress-control .vjs-mouse-display {
+        z-index: 2;
+      }
+
+      .vjs-progress-control:hover .vjs-mouse-display .vjs-time-tooltip {
+        width: max-content;
+        left: 50%;
+
+        display: flex;
+        gap: 0.2em;
+
+        transform: translateX(-50%);
+      }
+    </style>
+  </head>
+
+  <body>
+    <video
+      id="myPlayerID"
+      class="video-js"
+      controls
+      preload="auto"
+      width="1024"
+      height="1080"
+      data-setup="{}"
+    >
+      <source src="videos/trailer.mp4" type="video/mp4" />
+    </video>
+
+    <script src="/js/video.js"></script>
+    <script>
+      // Convert time format to seconds
+      const formatedTimeToSeconds = (time) => {
+        const timeSplit = time.split(':');
+        const seconds = +timeSplit.pop();
+
+        return timeSplit.reduce((acc, curr, i, arr) => {
+          return acc + +curr * Math.pow(60, arr.length - i - 1);
+        }, seconds);
+      };
+
+      // Create time display element
+      const timeEl = (time) => {
+        return videojs.dom.createEl('span', undefined, undefined, `(${time})`);
+      };
+
+      // Create label element
+      const labelEl = (label) => {
+        return videojs.dom.createEl('strong', undefined, undefined, label);
+      };
+
+      // Add range markers to the video player
+      const addMarkers = () => {
+        const total = player.duration();
+        const { seekBar } = player.controlBar.progressControl;
+
+        // Clear existing markers
+        seekBar
+          .el()
+          .querySelectorAll('.vjs-marker-range')
+          .forEach((el) => el.remove());
+
+        markers.forEach((marker, index) => {
+          const start = marker.start;
+          const end = marker.end;
+          const startPercent = (start / total) * 100;
+          const endPercent = (end / total) * 100;
+          const width = endPercent - startPercent + '%';
+          const left = startPercent + '%';
+
+          // Create marker element with range width and color
+          const markerEl = videojs.dom.createEl('div', undefined, {
+            class: 'vjs-marker-range',
+            style: `left: ${left}; width: ${width}; background-color: ${
+              marker.color
+            }; z-index: ${10 + index}`,
+          });
+
+          seekBar.el().append(markerEl);
+
+          // Optionally, create and append label elements
+          if (marker.label) {
+            const labelEl = videojs.dom.createEl('div', undefined, {
+              class: 'vjs-marker-label',
+              innerHTML: marker.label,
+              style: `left: ${left}; width: ${width};`,
+            });
+
+            seekBar.el().append(labelEl);
+          }
+        });
+      };
+
+      // Define markers with start and end times
+      const markers = [
+        { start: 10, end: 20, label: 'Range 1', color: 'rgba(255, 0, 0, 0.7)' },
+        {
+          start: 15,
+          end: 18,
+          label: 'Range abc',
+          color: 'rgba(0, 0, 255, 0.7)',
+        },
+        {
+          start: 19,
+          end: 24,
+          label: 'Range xyz',
+          color: 'rgba(0, 100, 30, 0.7)',
+        },
+        { start: 45, end: 50, label: 'Range 2', color: 'rgba(0, 255, 0, 0.7)' },
+      ];
+
+      const player = videojs('myPlayerID');
+
+      // Add markers after metadata is loaded
+      player.on('loadedmetadata', addMarkers);
+
+      // Update tooltip with label if current time is within range
+      player.getDescendant([
+        'controlBar',
+        'progressControl',
+        'seekBar',
+        'mouseTimeDisplay',
+        'timeTooltip',
+      ]).update = function (seekBarRect, seekBarPoint, time) {
+        const timeInSeconds = formatedTimeToSeconds(time);
+        const markerIndex = markers.findIndex(
+          ({ start, end }) => timeInSeconds >= start && timeInSeconds <= end
+        );
+
+        if (markerIndex > -1) {
+          const { label } = markers[markerIndex];
+
+          videojs.dom.emptyEl(this.el());
+          videojs.dom.appendContent(this.el(), [labelEl(label), timeEl(time)]);
+
+          return;
+        }
+
+        this.write(time);
+      };
+    </script>
+  </body>
+</html>
