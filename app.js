@@ -6,9 +6,12 @@ const port = 3000;
 // Serve static files (for example, CSS, JS files) from the public folder
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Route for the HTML page
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+app.get('/demo1', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index-dot.html'));
+});
+
+app.get('/demo2', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index-period.html'));
 });
 
 // Start the server
